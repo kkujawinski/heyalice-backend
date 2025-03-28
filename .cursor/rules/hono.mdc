@@ -1,0 +1,401 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# 🚀 Hono Complete Guide for Node.js Developers
+
+Hono is a fast, lightweight framework for building APIs and apps across platforms like Node.js, Cloudflare Workers, Vercel, Deno, Bun, Fastly, and more.
+
+---
+
+## ⚙️ Supported Templates
+
+When you run:
+
+```bash
+npm create hono@latest my-app
+```
+
+You can choose from:
+
+- `aws-lambda`
+- `bun`
+- `cloudflare-pages`
+- `cloudflare-workers`
+- `deno`
+- `fastly`
+- `nextjs`
+- `nodejs`
+- `vercel`
+
+Then:
+
+```bash
+cd my-app
+npm install
+npm run dev
+```
+
+📦 Also works with: `yarn`, `pnpm`, `bun`, `deno`
+
+---
+
+## 🌐 Hello World
+
+\`\`\`ts
+import { Hono } from 'hono'
+
+const app = new Hono()
+
+app.get('/', (co!'))
+
+export default app
+\`\`\`
+
+Browse [http://localhost:8787](mdc:http:/localhost:8787)
+
+---
+
+## 📦 Routing Patterns
+
+### Basic HTTP Methods
+
+\`\`\`ts
+app.get('/', (c) => c.text('GET'))
+app.post('/', (c) => c.text('POST'))
+app.put('/', (c) => c.text('PUT'))
+app.delete('/', (c) => c.text('DELETE'))
+\`\`\`
+
+### Wildcards & All Methods
+
+\`\`\`ts
+app.all('/hello', (c) => c.text('All methods'))
+app.get('/wild/*/card', (c) => c.text('Wildcard match'))
+\`\`\`
+
+### Custom HTTP Methods
+
+\`\`\`ts
+app.on('PURGE', '/cache', (c) => c.text('Purge cache'))
+\`\`\`
+
+### Multiple Methods & Paths
+
+\`\`\`ts
+app.on(['PUT', 'DELETE'], '/post', (c) => c.text('PUT or DELETE'))
+app.on('GET', ['/hello', '/hi', '/hey'], (c) => c.text('Hey'))
+\`\`\`
+
+### Params, Optional Params, Regex
+
+\`\`\`ts
+app.get('/user/:name', (c) => c.text(c.req.param('name')))
+app.get('/api/item/:type?', (c) => c.text('Optional type'))
+app.get('/file/:filename{.+\\.png}', (c) => c.text('PNG file'))
+\`\`\`
+
+### Chained Routes
+
+\`\`\`ts
+app
+  .get('/endpoint', (c) => c.text('GET'))
+  .post((c) => c.text('POST'))
+  .delete((c) => c.text('DELETE'))
+\`\`\`
+
+---
+
+## 🧩 Grouped Routes
+
+### With Base Path
+
+\`\`\`ts
+const books = new Hono()
+books.get('/', (c) => c.text('List books'))
+books.get('/:id', (c) => c.text(\`Book \${c.req.param('id')}\`))
+
+app.route('/books', books)
+\`\`\`
+
+### Without Changing Base
+
+\`\`\`ts
+const user = new Hono().basePath('/user')
+user.get('/', (c) => c.text('Users'))
+
+app.route('/', user)
+\`\`\`
+
+### ⚠️ Grouping Pitfall
+
+Correct:
+
+\`\`\`ts
+three.get('/hi', (c) => c.text('hi'))
+two.route('/three', three)
+app.route('/two', two) // ✅
+\`\`\`
+
+Incorrect:
+
+\`\`\`ts
+app.route('/two', two)
+two.route('/three', three) // ❌ 404 error
+\`\`\`
+
+---
+
+## 🧠 Context & Response
+
+\`\`\`ts
+app.get('/welcome', (c) => {
+  c.header('X-Message', 'Hello')
+  c.status(201)
+  return c.body('Welcome!')
+})
+
+app.get('/json', (c) => c.json({ ok: true }))
+app.get('/html', (c) => c.html('<h1>Hello</h1>'))
+app.get('/notfound', (c) => c.notFound())
+app.get('/redirect', (c) => c.redirect('/', 302))
+\`\`\`
+
+### Modify Headers After Handler
+
+\`\`\`ts
+app.use(async (c, next) => {
+  await next()
+  c.res.headers.append('X-Debug', 'true')
+})
+\`\`\`
+
+---
+
+## 🖼️ JSX & Rendering
+
+### JSX Route
+
+\`\`\`tsx
+const Page = () => (
+  <html><body><h1>Hello</h1></body></html>
+)
+
+app.get('/page', (c) => c.html(<Page />))
+\`\`\`
+
+### Layout Renderer
+
+\`\`\`ts
+app.use((c, next) => {
+  c.setRenderer((content) => c.html(\`<div>\${content}</div>\`))
+  return next()
+})
+
+app.get('/', (c) => c.render('Wrapped'))
+\`\`\`
+
+### With Head Props (Type-safe)
+
+\`\`\`ts
+declare module 'hono' {
+  interface ContextRenderer {
+    (content: string, head: { title: string }): Response
+  }
+}
+\`\`\`
+
+---
+
+## 🔐 Middleware
+
+### Built-in
+
+\`\`\`ts
+import { logger } from 'hono/logger'
+import { basicAuth } from 'hono/basic-auth'
+
+app.use(logger())
+app.use('/admin/*', basicAuth({ username: 'admin', password: 'secret' }))
+\`\`\`
+
+### Custom
+
+\`\`\`ts
+import { createMiddleware } from 'hono/factory'
+
+const echo = createMiddleware<{ Variables: { echo: (s: string) => string } }>(
+  async (c, next) => {
+    c.set('echo', (s) => \`Echo: \${s}\`)
+    await next()
+  }
+)
+
+app.use(echo)
+app.get('/echo', (c) => c.text(c.var.echo('Hi')))
+\`\`\`
+
+---
+
+## 📡 WebSockets (Cloudflare)
+
+\`\`\`ts
+import { upgradeWebSocket } from 'hono/cloudflare-workers'
+
+app.get('/ws', upgradeWebSocket((c) => ({
+  onMessage(evt, ws) {
+    ws.send('pong')
+  }
+})))
+\`\`\`
+
+---
+
+## 🧬 Environment Bindings
+
+\`\`\`ts
+type Bindings = { KV: KVNamespace }
+
+const app = new Hono<{ Bindings: Bindings }>()
+
+app.get('/', async (c) => {
+  const value = await c.env.KV.get('key')
+  return c.text(value ?? 'Not found')
+})
+\`\`\`
+
+---
+
+## 🧪 Testing
+
+\`\`\`ts
+import { createTestClient } from 'hono/testing'
+
+const app = new Hono()
+app.get('/', (c) => c.text('OK'))
+
+const client = createTestClient(app)
+const res = await client.get('/')
+\`\`\`
+
+---
+
+## ✅ Validation (Zod)
+
+\`\`\`ts
+import { z } from 'zod'
+import { zValidator } from '@hono/zod-validator'
+
+const schema = z.object({ name: z.string() })
+
+app.post('/user', zValidator('json', schema), (c) => {
+  const data = c.req.valid('json')
+  return c.json(data)
+})
+\`\`\`
+
+---
+
+## 🧠 Advanced Routing
+
+### Host Header Routing
+
+\`\`\`ts
+const app = new Hono({
+  getPath: (req) => '/' + req.headers.get('host') + new URL(req.url).pathname
+})
+
+app.get('/example.com/hello', (c) => c.text('Hello from example.com'))
+\`\`\`
+
+---
+
+## ❌ Error Handling
+
+\`\`\`ts
+import { HTTPException } from 'hono/http-exception'
+
+app.use(async (c, next) => {
+  try {
+    await next()
+  } catch (e) {
+    if (e instanceof HTTPException) return e.getResponse()
+    return c.text('Unexpected error', 500)
+  }
+})
+
+app.get('/fail', () => {
+  throw new HTTPException(401, { message: 'Unauthorized' })
+})
+\`\`\`
+
+---
+
+## 🔗 RPC via hc()
+
+\`\`\`ts
+import app from './authors'
+import { hc } from 'hono/client'
+
+const client = hc<typeof app>('http://localhost')
+await client.get('/authors')
+\`\`\`
+
+---
+
+## 🚀 Deployment
+
+| Platform | How |
+|----------|-----|
+| Cloudflare | `wrangler deploy` |
+| Node.js | `node index.js` or `ts-node` |
+| Vercel | Add `vercel.json` and export default handler |
+| Deno Deploy | Push via GitHub or `deployctl` |
+| AWS Lambda | Use `aws-lambda` template |
+| Bun | Just run `bun run dev` |
+| Fastly / Netlify / Edge | Use respective template |
+
+---
+
+## 🧭 Best Practices
+
+- Avoid controller-style abstraction unless using `factory.createHandlers()`
+- Inline handlers to enable type inference
+- Use `app.route()` to modularize
+- Use `createMiddleware()` for reusable logic
+- Use `hc<typeof app>()` for RPC with types
+- Don't mix route registration order
+
+---
+
+## 🧠 Common Pitfalls
+
+| Pitfall | Fix |
+|--------|-----|
+| Grouping routes in wrong order | Define `route()` from leaf to root |
+| Using `.tsx` without config | Rename + enable JSX in runtime |
+| Middleware order matters | `app.use()` before `app.get()` |
+| Catch-all handler eats others | Place `app.get('*')` last |
+
+---
+
+## ✅ Cheatsheet
+
+Task | Code
+---|---
+Create app | `npm create hono@latest my-app`
+Start dev server | `npm run dev`
+Hello world | `app.get('/', c => c.text('Hi'))`
+Return JSON | `c.json({ ok: true })`
+Path param | `c.req.param('id')`
+Query param | `c.req.query('key')`
+Redirect | `c.redirect('/', 301)`
+Middleware | `app.use(logger())`
+Custom HTTP method | `app.on('PURGE', '/cache', ...)`
+Use JSX | Rename to `.tsx`, use `<html>...</html>`
+Deploy CF | `wrangler deploy`
+
+---
+
+Let me know if you'd like this exported as a PDF, README.md, or injected into a starter repo.
