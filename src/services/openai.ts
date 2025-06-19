@@ -1,5 +1,6 @@
 import type { ChatRequest, ChatResponse } from '../types/index.js';
 import { config } from '../config/index.js';
+import { debugResponse, debugRequest, debugStreamResponse } from '../utils/debug.js';
 
 export class OpenAIService {
   private apiKey: string;
@@ -106,13 +107,27 @@ export class OpenAIService {
         payload.max_output_tokens = max_tokens;
       }
 
-      const response = await fetch(this.apiUrl, {
+      // Debug the outgoing request
+      const requestOptions = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.apiKey}`
         },
         body: JSON.stringify(payload)
+      };
+
+      debugRequest(this.apiUrl, requestOptions, {
+        label: 'OpenAI API Request',
+        maxBodyLength: 5000
+      });
+
+      const response = await fetch(this.apiUrl, requestOptions);
+
+      // Debug the response
+      await debugResponse(response, {
+        label: 'OpenAI API Response',
+        maxBodyLength: 8000 
       });
 
       if (!response.ok) {
@@ -159,13 +174,27 @@ export class OpenAIService {
         payload.max_output_tokens = max_tokens;
       }
 
-      const response = await fetch(this.apiUrl, {
+      // Debug the outgoing streaming request
+      const requestOptions = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.apiKey}`
         },
         body: JSON.stringify(payload)
+      };
+
+      debugRequest(this.apiUrl, requestOptions, {
+        label: 'OpenAI Streaming API Request',
+        maxBodyLength: 5000
+      });
+
+      const response = await fetch(this.apiUrl, requestOptions);
+
+      // Debug the streaming response headers
+      await debugResponse(response, {
+        label: 'OpenAI Streaming API Response',
+        includeBody: false // Don't consume the stream body for debugging
       });
 
       if (!response.ok) {
@@ -174,7 +203,12 @@ export class OpenAIService {
         throw new Error(`OpenAI API error: ${errorData.error?.message || response.statusText}`);
       }
 
-      return response.body as ReadableStream;
+      // Wrap the stream with debug logging
+      const debuggedStream = debugStreamResponse(response.body as ReadableStream, {
+        label: 'OpenAI Streaming Response'
+      });
+
+      return debuggedStream;
     } catch (error) {
       console.error('Error generating streamed response:', error);
       throw error;
