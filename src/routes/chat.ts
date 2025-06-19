@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import type { Context } from 'hono';
 import { OpenAIService } from '../services/openai.js';
 import { validateChatRequest } from '../middleware/validation.js';
 import { errorHandler } from '../middleware/error.js';
@@ -22,7 +23,7 @@ router.use('*', errorHandler);
 router.use('/api/*', authMiddleware);
 
 // Apply transformation after validation but before handling
-router.post('/api/chat', validateChatRequest, transformMessages, async (c) => {
+router.post('/api/chat', validateChatRequest, transformMessages, async (c: Context<{ Variables: Variables }>) => {
   const body = c.get('chatRequest');
   
   if (body.stream) {
@@ -30,17 +31,27 @@ router.post('/api/chat', validateChatRequest, transformMessages, async (c) => {
     const rawStream = await openaiService.generateStreamedResponse(body);
     const formattedStream = formatAsSSE(rawStream);
     
+    // For streaming in Hono, return the ReadableStream directly with proper headers
     return new Response(formattedStream, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Cache-Control'
       }
     });
   } 
   
   console.log('Generating standard response');
   const response = await openaiService.generateResponse(body);
+
+  // Ensure response is properly serializable
+  if (response instanceof Response) {
+    const jsonData = await response.json();
+    return c.json(jsonData);
+  }
+
   return c.json(response);
 });
 
