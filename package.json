@@ -2,7 +2,7 @@
   "name": "alice-apps-template",
   "type": "module",
   "scripts": {
-    "dev": "bun --watch src/index.ts"
+    "dev": "tsx watch src/index.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.14.0",

@@ -46,13 +46,21 @@ router.post('/api/chat', validateChatRequest, transformMessages, async (c: Conte
   console.log('Generating standard response');
   const response = await openaiService.generateResponse(body);
 
-  // Ensure response is properly serializable
-  if (response instanceof Response) {
-    const jsonData = await response.json();
-    return c.json(jsonData);
-  }
+  // Transform to OpenAI-compatible format
+  let openAIResponse;
+  // Map all output_text from the assistant's content array to choices
+  const choices = response.output
+    .filter((item: any) => item.role === 'assistant' && Array.isArray(item.content))
+    .flatMap((item: any) =>
+      item.content
+        .filter((c: any) => c.type === 'output_text' && typeof c.text === 'string')
+        .map((c: any) => ({ message: { content: c.text } }))
+    );
+  openAIResponse = {
+    choices: choices.length > 0 ? choices : [ { message: { content: '' } } ]
+  };
 
-  return c.json(response);
+  return c.json(openAIResponse);
 });
 
 export default router; 

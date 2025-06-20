@@ -93,11 +93,6 @@ export class OpenAIService {
         stream
       };
 
-      // Only add optional parameters if they exist
-      if (conversation_id) {
-        payload.previous_response_id = conversation_id;
-      }
-
       if (tools && tools.length > 0) {
         payload.tools = this.prepareToolsConfig(tools as string[]);
       }

@@ -1,4 +1,4 @@
-import { Context, Next } from 'hono';
+import { type Context, type Next } from 'hono';
 import type { ChatRequest, ChatMessage } from '../types/index.js';
 
 export type MessageTransformFn = (messages: ChatMessage[]) => ChatMessage[];

@@ -1,4 +1,4 @@
-import { Context, Next } from 'hono';
+import { type Context, type Next } from 'hono';
 import { config } from '../config/index.js';
 
 export const authMiddleware = async (c: Context, next: Next) => {

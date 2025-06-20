@@ -1,4 +1,4 @@
-import { Context, Next } from 'hono';
+import { type Context, type Next } from 'hono';
 
 export const errorHandler = async (c: Context, next: Next) => {
   try {

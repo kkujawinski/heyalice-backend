@@ -1,4 +1,4 @@
-import { Context, Next } from 'hono';
+import type { Context, Next } from 'hono';
 import type { ChatRequest } from '../types/index.js';
 
 export const validateChatRequest = async (c: Context, next: Next) => {
